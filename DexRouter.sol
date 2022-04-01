@@ -1,10 +1,11 @@
 /**
- *Submitted for verification at polygonscan.com on 2021-06-11
+ * Router for DEX
 */
 
-pragma solidity >=0.6.6;
+pragma solidity =0.6.6;
 
-interface IMaticFactory {
+
+interface IDexFactory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
     function feeTo() external view returns (address);
@@ -19,10 +20,6 @@ interface IMaticFactory {
     function setFeeTo(address) external;
     function setFeeToSetter(address) external;
 }
-
-// File: @uniswap/lib/contracts/libraries/TransferHelper.sol
-
-pragma solidity >=0.6.0;
 
 // helper methods for interacting with ERC20 tokens and sending ETH that do not consistently return true/false
 library TransferHelper {
@@ -50,11 +47,7 @@ library TransferHelper {
     }
 }
 
-// File: contracts/interfaces/IMaticRouter01.sol
-
-pragma solidity >=0.6.2;
-
-interface IMaticRouter01 {
+interface IDexRouter01 {
     function factory() external pure returns (address);
     function WETH() external pure returns (address);
 
@@ -148,12 +141,7 @@ interface IMaticRouter01 {
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
-// File: contracts/interfaces/IMaticRouter02.sol
-
-pragma solidity >=0.6.2;
-
-
-interface IMaticRouter02 is IMaticRouter01 {
+interface IDexRouter02 is IDexRouter01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         uint liquidity,
@@ -171,7 +159,7 @@ interface IMaticRouter02 is IMaticRouter01 {
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external returns (uint amountETH);
-    
+
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint amountIn,
         uint amountOutMin,
@@ -191,14 +179,10 @@ interface IMaticRouter02 is IMaticRouter01 {
         address[] calldata path,
         address to,
         uint deadline
-    ) external; 
+    ) external;
 }
 
-// File: contracts/interfaces/IMaticPair.sol
-
-pragma solidity >=0.6.6;
-
-interface IMaticPair {
+interface IDexPair {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
 
@@ -249,12 +233,7 @@ interface IMaticPair {
     function initialize(address, address) external;
 }
 
-// File: contracts/libraries/SafeMath.sol
-
-pragma solidity =0.6.6;
-
 // a library for performing overflow-safe math, courtesy of DappHub (https://github.com/dapphub/ds-math)
-
 library SafeMath {
     function add(uint x, uint y) internal pure returns (uint z) {
         require((z = x + y) >= x, 'ds-math-add-overflow');
@@ -269,30 +248,14 @@ library SafeMath {
     }
 }
 
-// File: contracts/libraries/MaticLibrary.sol
-
-pragma solidity >=0.5.0;
-
-/*
- * MaticSwapFinance 
- * App:             https://apeswap.finance
- * Medium:          https://medium.com/@ape_swap    
- * Twitter:         https://twitter.com/ape_swap 
- * Telegram:        https://t.me/ape_swap
- * Announcements:   https://t.me/ape_swap_news
- * GitHub:          https://github.com/MaticSwapFinance
- */
-
-
-
-library MaticLibrary {
+library DexLibrary {
     using SafeMath for uint;
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, 'MaticLibrary: IDENTICAL_ADDRESSES');
+        require(tokenA != tokenB, 'DexLibrary: IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'MaticLibrary: ZERO_ADDRESS');
+        require(token0 != address(0), 'DexLibrary: ZERO_ADDRESS');
     }
 
     // calculates the CREATE2 address for a pair without making any external calls
@@ -302,7 +265,7 @@ library MaticLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'894fc1a1eabb59db1d4d6eaa9625b75a1f0982ec19237890d840d2025470302e' // init code hash
+                hex'd8d22c8ff48fed265d12211e0439100c44dbcbd3f68baa9c28764889e89d064b' // init code hash
             ))));
     }
 
@@ -310,21 +273,21 @@ library MaticLibrary {
     function getReserves(address factory, address tokenA, address tokenB) internal view returns (uint reserveA, uint reserveB) {
         (address token0,) = sortTokens(tokenA, tokenB);
         pairFor(factory, tokenA, tokenB);
-        (uint reserve0, uint reserve1,) = IMaticPair(pairFor(factory, tokenA, tokenB)).getReserves();
+        (uint reserve0, uint reserve1,) = IDexPair(pairFor(factory, tokenA, tokenB)).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
     function quote(uint amountA, uint reserveA, uint reserveB) internal pure returns (uint amountB) {
-        require(amountA > 0, 'MaticLibrary: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'MaticLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountA > 0, 'DexLibrary: INSUFFICIENT_AMOUNT');
+        require(reserveA > 0 && reserveB > 0, 'DexLibrary: INSUFFICIENT_LIQUIDITY');
         amountB = amountA.mul(reserveB) / reserveA;
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
-        require(amountIn > 0, 'MaticLibrary: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'MaticLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountIn > 0, 'DexLibrary: INSUFFICIENT_INPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'DexLibrary: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn.mul(998);
         uint numerator = amountInWithFee.mul(reserveOut);
         uint denominator = reserveIn.mul(1000).add(amountInWithFee);
@@ -333,8 +296,8 @@ library MaticLibrary {
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) internal pure returns (uint amountIn) {
-        require(amountOut > 0, 'MaticLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'MaticLibrary: INSUFFICIENT_LIQUIDITY');
+        require(amountOut > 0, 'DexLibrary: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'DexLibrary: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn.mul(amountOut).mul(1000);
         uint denominator = reserveOut.sub(amountOut).mul(998);
         amountIn = (numerator / denominator).add(1);
@@ -342,7 +305,7 @@ library MaticLibrary {
 
     // performs chained getAmountOut calculations on any number of pairs
     function getAmountsOut(address factory, uint amountIn, address[] memory path) internal view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'MaticLibrary: INVALID_PATH');
+        require(path.length >= 2, 'DexLibrary: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
@@ -353,7 +316,7 @@ library MaticLibrary {
 
     // performs chained getAmountIn calculations on any number of pairs
     function getAmountsIn(address factory, uint amountOut, address[] memory path) internal view returns (uint[] memory amounts) {
-        require(path.length >= 2, 'MaticLibrary: INVALID_PATH');
+        require(path.length >= 2, 'DexLibrary: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
@@ -362,10 +325,6 @@ library MaticLibrary {
         }
     }
 }
-
-// File: contracts/interfaces/IERC20.sol
-
-pragma solidity >=0.5.0;
 
 interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
@@ -383,45 +342,20 @@ interface IERC20 {
     function transferFrom(address from, address to, uint value) external returns (bool);
 }
 
-// File: contracts/interfaces/IWETH.sol
-
-pragma solidity >=0.5.0;
-
 interface IWETH {
     function deposit() external payable;
     function transfer(address to, uint value) external returns (bool);
     function withdraw(uint) external;
 }
 
-// File: contracts/MaticRouter.sol
-
-pragma solidity =0.6.6;
-
-/*
- * MaticSwapFinance 
- * App:             https://apeswap.finance
- * Medium:          https://medium.com/@ape_swap    
- * Twitter:         https://twitter.com/ape_swap 
- * Telegram:        https://t.me/ape_swap
- * Announcements:   https://t.me/ape_swap_news
- * GitHub:          https://github.com/MaticSwapFinance
- */
-
-
-
-
-
-
-
-
-contract MaticRouter is IMaticRouter02 {
+contract DexRouter is IDexRouter02 {
     using SafeMath for uint;
 
     address public immutable override factory;
     address public immutable override WETH;
 
     modifier ensure(uint deadline) {
-        require(deadline >= block.timestamp, 'MaticRouter: EXPIRED');
+        require(deadline >= block.timestamp, 'DexRouter: EXPIRED');
         _;
     }
 
@@ -444,21 +378,21 @@ contract MaticRouter is IMaticRouter02 {
         uint amountBMin
     ) internal virtual returns (uint amountA, uint amountB) {
         // create the pair if it doesn't exist yet
-        if (IMaticFactory(factory).getPair(tokenA, tokenB) == address(0)) {
-            IMaticFactory(factory).createPair(tokenA, tokenB);
+        if (IDexFactory(factory).getPair(tokenA, tokenB) == address(0)) {
+            IDexFactory(factory).createPair(tokenA, tokenB);
         }
-        (uint reserveA, uint reserveB) = MaticLibrary.getReserves(factory, tokenA, tokenB);
+        (uint reserveA, uint reserveB) = DexLibrary.getReserves(factory, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
-            uint amountBOptimal = MaticLibrary.quote(amountADesired, reserveA, reserveB);
+            uint amountBOptimal = DexLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, 'MaticRouter: INSUFFICIENT_B_AMOUNT');
+                require(amountBOptimal >= amountBMin, 'DexRouter: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
-                uint amountAOptimal = MaticLibrary.quote(amountBDesired, reserveB, reserveA);
+                uint amountAOptimal = DexLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, 'MaticRouter: INSUFFICIENT_A_AMOUNT');
+                require(amountAOptimal >= amountAMin, 'DexRouter: INSUFFICIENT_A_AMOUNT');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -474,10 +408,10 @@ contract MaticRouter is IMaticRouter02 {
         uint deadline
     ) external virtual override ensure(deadline) returns (uint amountA, uint amountB, uint liquidity) {
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-        address pair = MaticLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = DexLibrary.pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        liquidity = IMaticPair(pair).mint(to);
+        liquidity = IDexPair(pair).mint(to);
     }
     function addLiquidityETH(
         address token,
@@ -495,11 +429,11 @@ contract MaticRouter is IMaticRouter02 {
             amountTokenMin,
             amountETHMin
         );
-        address pair = MaticLibrary.pairFor(factory, token, WETH);
+        address pair = DexLibrary.pairFor(factory, token, WETH);
         TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
         IWETH(WETH).deposit{value: amountETH}();
         assert(IWETH(WETH).transfer(pair, amountETH));
-        liquidity = IMaticPair(pair).mint(to);
+        liquidity = IDexPair(pair).mint(to);
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
     }
@@ -514,13 +448,13 @@ contract MaticRouter is IMaticRouter02 {
         address to,
         uint deadline
     ) public virtual override ensure(deadline) returns (uint amountA, uint amountB) {
-        address pair = MaticLibrary.pairFor(factory, tokenA, tokenB);
-        IMaticPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        (uint amount0, uint amount1) = IMaticPair(pair).burn(to);
-        (address token0,) = MaticLibrary.sortTokens(tokenA, tokenB);
+        address pair = DexLibrary.pairFor(factory, tokenA, tokenB);
+        IDexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        (uint amount0, uint amount1) = IDexPair(pair).burn(to);
+        (address token0,) = DexLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        require(amountA >= amountAMin, 'MaticRouter: INSUFFICIENT_A_AMOUNT');
-        require(amountB >= amountBMin, 'MaticRouter: INSUFFICIENT_B_AMOUNT');
+        require(amountA >= amountAMin, 'DexRouter: INSUFFICIENT_A_AMOUNT');
+        require(amountB >= amountBMin, 'DexRouter: INSUFFICIENT_B_AMOUNT');
     }
     function removeLiquidityETH(
         address token,
@@ -553,9 +487,9 @@ contract MaticRouter is IMaticRouter02 {
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint amountA, uint amountB) {
-        address pair = MaticLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = DexLibrary.pairFor(factory, tokenA, tokenB);
         uint value = approveMax ? uint(-1) : liquidity;
-        IMaticPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IDexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
     function removeLiquidityETHWithPermit(
@@ -567,9 +501,9 @@ contract MaticRouter is IMaticRouter02 {
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint amountToken, uint amountETH) {
-        address pair = MaticLibrary.pairFor(factory, token, WETH);
+        address pair = DexLibrary.pairFor(factory, token, WETH);
         uint value = approveMax ? uint(-1) : liquidity;
-        IMaticPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IDexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
 
@@ -604,24 +538,24 @@ contract MaticRouter is IMaticRouter02 {
         uint deadline,
         bool approveMax, uint8 v, bytes32 r, bytes32 s
     ) external virtual override returns (uint amountETH) {
-        address pair = MaticLibrary.pairFor(factory, token, WETH);
+        address pair = DexLibrary.pairFor(factory, token, WETH);
         uint value = approveMax ? uint(-1) : liquidity;
-        IMaticPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IDexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
             token, liquidity, amountTokenMin, amountETHMin, to, deadline
         );
     }
-    
+
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
     function _swap(uint[] memory amounts, address[] memory path, address _to) internal virtual {
         for (uint i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0,) = MaticLibrary.sortTokens(input, output);
+            (address token0,) = DexLibrary.sortTokens(input, output);
             uint amountOut = amounts[i + 1];
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOut) : (amountOut, uint(0));
-            address to = i < path.length - 2 ? MaticLibrary.pairFor(factory, output, path[i + 2]) : _to;
-            IMaticPair(MaticLibrary.pairFor(factory, input, output)).swap(
+            address to = i < path.length - 2 ? DexLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            IDexPair(DexLibrary.pairFor(factory, input, output)).swap(
                 amount0Out, amount1Out, to, new bytes(0)
             );
         }
@@ -633,10 +567,10 @@ contract MaticRouter is IMaticRouter02 {
         address to,
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-        amounts = MaticLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        amounts = DexLibrary.getAmountsOut(factory, amountIn, path);
+        require(amounts[amounts.length - 1] >= amountOutMin, 'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
     }
@@ -647,10 +581,10 @@ contract MaticRouter is IMaticRouter02 {
         address to,
         uint deadline
     ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-        amounts = MaticLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'MaticRouter: EXCESSIVE_INPUT_AMOUNT');
+        amounts = DexLibrary.getAmountsIn(factory, amountOut, path);
+        require(amounts[0] <= amountInMax, 'DexRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, to);
     }
@@ -662,11 +596,11 @@ contract MaticRouter is IMaticRouter02 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'MaticRouter: INVALID_PATH');
-        amounts = MaticLibrary.getAmountsOut(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(path[0] == WETH, 'DexRouter: INVALID_PATH');
+        amounts = DexLibrary.getAmountsOut(factory, msg.value, path);
+        require(amounts[amounts.length - 1] >= amountOutMin, 'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        assert(IWETH(WETH).transfer(DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
     }
     function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
@@ -676,11 +610,11 @@ contract MaticRouter is IMaticRouter02 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'MaticRouter: INVALID_PATH');
-        amounts = MaticLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'MaticRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(path[path.length - 1] == WETH, 'DexRouter: INVALID_PATH');
+        amounts = DexLibrary.getAmountsIn(factory, amountOut, path);
+        require(amounts[0] <= amountInMax, 'DexRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -693,11 +627,11 @@ contract MaticRouter is IMaticRouter02 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'MaticRouter: INVALID_PATH');
-        amounts = MaticLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(path[path.length - 1] == WETH, 'DexRouter: INVALID_PATH');
+        amounts = DexLibrary.getAmountsOut(factory, amountIn, path);
+        require(amounts[amounts.length - 1] >= amountOutMin, 'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]
         );
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -711,33 +645,33 @@ contract MaticRouter is IMaticRouter02 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'MaticRouter: INVALID_PATH');
-        amounts = MaticLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= msg.value, 'MaticRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(path[0] == WETH, 'DexRouter: INVALID_PATH');
+        amounts = DexLibrary.getAmountsIn(factory, amountOut, path);
+        require(amounts[0] <= msg.value, 'DexRouter: EXCESSIVE_INPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(MaticLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        assert(IWETH(WETH).transfer(DexLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
         // refund dust eth, if any
         if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
     }
-    
+
     // **** SWAP (supporting fee-on-transfer tokens) ****
     // requires the initial amount to have already been sent to the first pair
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
         for (uint i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0,) = MaticLibrary.sortTokens(input, output);
-            IMaticPair pair = IMaticPair(MaticLibrary.pairFor(factory, input, output));
+            (address token0,) = DexLibrary.sortTokens(input, output);
+            IDexPair pair = IDexPair(DexLibrary.pairFor(factory, input, output));
             uint amountInput;
             uint amountOutput;
             { // scope to avoid stack too deep errors
             (uint reserve0, uint reserve1,) = pair.getReserves();
             (uint reserveInput, uint reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
             amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
-            amountOutput = MaticLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
+            amountOutput = DexLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-            address to = i < path.length - 2 ? MaticLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            address to = i < path.length - 2 ? DexLibrary.pairFor(factory, output, path[i + 2]) : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
@@ -749,13 +683,13 @@ contract MaticRouter is IMaticRouter02 {
         uint deadline
     ) external virtual override ensure(deadline) {
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amountIn
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT'
+            'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
@@ -770,15 +704,15 @@ contract MaticRouter is IMaticRouter02 {
         payable
         ensure(deadline)
     {
-        require(path[0] == WETH, 'MaticRouter: INVALID_PATH');
+        require(path[0] == WETH, 'DexRouter: INVALID_PATH');
         uint amountIn = msg.value;
         IWETH(WETH).deposit{value: amountIn}();
-        assert(IWETH(WETH).transfer(MaticLibrary.pairFor(factory, path[0], path[1]), amountIn));
+        assert(IWETH(WETH).transfer(DexLibrary.pairFor(factory, path[0], path[1]), amountIn));
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT'
+            'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT'
         );
     }
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -793,20 +727,20 @@ contract MaticRouter is IMaticRouter02 {
         override
         ensure(deadline)
     {
-        require(path[path.length - 1] == WETH, 'MaticRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'DexRouter: INVALID_PATH');
         TransferHelper.safeTransferFrom(
-            path[0], msg.sender, MaticLibrary.pairFor(factory, path[0], path[1]), amountIn
+            path[0], msg.sender, DexLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint amountOut = IERC20(WETH).balanceOf(address(this));
-        require(amountOut >= amountOutMin, 'MaticRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amountOut >= amountOutMin, 'DexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
-    
+
     // **** LIBRARY FUNCTIONS ****
     function quote(uint amountA, uint reserveA, uint reserveB) public pure virtual override returns (uint amountB) {
-        return MaticLibrary.quote(amountA, reserveA, reserveB);
+        return DexLibrary.quote(amountA, reserveA, reserveB);
     }
 
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut)
@@ -816,7 +750,7 @@ contract MaticRouter is IMaticRouter02 {
         override
         returns (uint amountOut)
     {
-        return MaticLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
+        return DexLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut)
@@ -826,7 +760,7 @@ contract MaticRouter is IMaticRouter02 {
         override
         returns (uint amountIn)
     {
-        return MaticLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+        return DexLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
     }
 
     function getAmountsOut(uint amountIn, address[] memory path)
@@ -836,7 +770,7 @@ contract MaticRouter is IMaticRouter02 {
         override
         returns (uint[] memory amounts)
     {
-        return MaticLibrary.getAmountsOut(factory, amountIn, path);
+        return DexLibrary.getAmountsOut(factory, amountIn, path);
     }
 
     function getAmountsIn(uint amountOut, address[] memory path)
@@ -846,6 +780,6 @@ contract MaticRouter is IMaticRouter02 {
         override
         returns (uint[] memory amounts)
     {
-        return MaticLibrary.getAmountsIn(factory, amountOut, path);
+        return DexLibrary.getAmountsIn(factory, amountOut, path);
     }
 }
